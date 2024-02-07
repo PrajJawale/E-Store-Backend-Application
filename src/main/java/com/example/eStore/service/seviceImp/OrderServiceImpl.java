@@ -14,6 +14,8 @@ import com.example.eStore.service.OrderService;
 import com.example.eStore.service.ProductService;
 import jakarta.persistence.criteria.Order;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
@@ -36,6 +38,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     OrderRepository orderRepository;
+
+    @Autowired
+    private JavaMailSender emailSender;
 
     @Override
     public Orders placeOrder(Card card, Customer customer) throws Exception {
@@ -110,12 +115,18 @@ public class OrderServiceImpl implements OrderService {
         int currQuantity = orderRequestDto.getRequiredQuantity();
         product.setQuantity(avilable - currQuantity);
         if (product.getQuantity() == 0) {
+            product.setProductStatus(ProductStatus.OUTOFSTOCK);
             throw new Exception("Product Out Of Stock");
         }
-        product.setProductStatus(ProductStatus.OUTOFSTOCK);
+
         productRepository.save(product);
-
-
+        String text = "Congratulation "+ customer.getName() + " Your Product " + product.getName()+"Ordered Successfully";
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("noreply@baeldung.com");
+        message.setTo(customer.getEmailId());
+        message.setSubject("EStore");
+        message.setText(text);
+        emailSender.send(message);
         return OrderResponseDto.builder()
                 .customerName(customer.getName())
                 .orderNo(card.getCardNo())
